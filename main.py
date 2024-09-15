@@ -4,8 +4,7 @@ import random
 from string import ascii_uppercase
 
 app =Flask(__name__)
-app.secret_key = "super secret key"
-app.config["SECRECT_KEY"] = "hdshff"
+app.config["SECRET_KEY"] = "hdshff"
 socketio = SocketIO(app)
 
 rooms={}
@@ -37,13 +36,15 @@ def home():
         room = code
         if create!= False:
             room = generate_unique_code(4)
-            rooms[room] = {"members":0, "messages":[]}
+            rooms[room] = {"members": 0, "messages": [], "users": []}
             
         elif code not in rooms:
             return render_template("home.html", error="Room does not exist.", code=code, name=name)
         
         session["room"] = room
         session["name"] = name
+        rooms[room]["members"] += 1  
+        rooms[room]["users"].append(name)  # Add user to the list
         return redirect(url_for("room"))
 
     return render_template("home.html")
@@ -54,7 +55,7 @@ def room():
     if room is None or session.get("name") is None or room not in rooms:
         return redirect(url_for("home"))
     
-    return render_template("room.html", code=room, messages=rooms[room]["messages"])
+    return render_template("room.html", code=room, messages=rooms[room]["messages"], users=rooms[room]["users"])
 
 @socketio.on("message")
 def message(data):
@@ -70,6 +71,15 @@ def message(data):
     rooms[room]["messages"].append(content)
     print(f"{session.get('name')} said: {data['data']}")
     
+@socketio.on("connect")
+def connect():
+    room = session.get("room")
+    name = session.get("name")
+    if room in rooms:
+        join_room(room)
+        send({"name": name, "message": "has joined the room"}, to=room)
+        rooms[room]["members"] += 1
+    
 @socketio.on("disconnect")
 def disconnect():
     room = session.get("room")
@@ -78,6 +88,7 @@ def disconnect():
     
     if room in rooms:
         rooms[room]["members"] -= 1
+        rooms[room]["users"].remove(name)  # Remove user from the list
         if rooms[room]["members"] <= 0:
            del rooms[room]
         

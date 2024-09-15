@@ -1,6 +1,15 @@
 {% extends 'base.html' %} {% block content %}
 <div class="message-box">
   <h2>Chat Room: {{code}}</h2>
+    <!-- User List -->
+    <div class="user-list">
+        <h3>Active Users:</h3>
+        <ul id="user-list">
+          {% for user in users %}
+            <li>{{ user }}</li>
+          {% endfor %}
+        </ul>
+    </div>
   <div class="messages" id="messages"></div>
   <div class="inputs">
     <input
